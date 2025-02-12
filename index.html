@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tui-time-picker@2.1.3/dist/tui-time-picker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tui-date-picker@4.1.0/dist/tui-date-picker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tui-calendar@1.15.3/dist/tui-calendar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tui-timezone@1.0.0/tui-timezone.min.js"></script>
     
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
@@ -29,12 +30,22 @@
             let calendarEl = document.getElementById('calendar');
             let sheetUrl = "https://script.google.com/macros/s/AKfycbxLFbguGbBRS1OeUQFg99SoX_6kDSkICRssF9W2TaBzhvjbnxgsbdLEMgug1ygyQIdk/exec";
 
-            const calendar = new tui.Calendar(calendarEl, {
+            const calendar = new tui.Calendar('#calendar', {
                 defaultView: 'month',
-                taskView: ['task'],
-                scheduleView: ['time'],
+                taskView: true,
+                scheduleView: true,
                 useCreationPopup: true,
-                useDetailPopup: true
+                useDetailPopup: true,
+                week: {
+                    showTimezoneCollapseButton: true,
+                    timezones: [
+                        {
+                            timezoneOffset: 0,
+                            displayLabel: 'UTC',
+                            tooltip: 'Universal Time Coordinated'
+                        }
+                    ]
+                }
             });
 
             async function fetchEvents() {
