@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RP-Event Kalender</title>
     
-    <!-- Korrigierte TUI Calendar Quellen -->
-    <link rel="stylesheet" href="https://uicdn.toast.com/tui-calendar/latest/tui-calendar.min.css">
-    <script src="https://uicdn.toast.com/tui-code-snippet/latest/tui-code-snippet.min.js"></script>
-    <script src="https://uicdn.toast.com/tui-time-picker/latest/tui-time-picker.min.js"></script>
-    <script src="https://uicdn.toast.com/tui-date-picker/latest/tui-date-picker.min.js"></script>
-    <script src="https://uicdn.toast.com/tui-calendar/latest/tui-calendar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <!-- FullCalendar Quellen -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.5/main.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.5/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
     
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
@@ -25,28 +22,29 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("TUI Calendar geladen");
+            console.log("FullCalendar geladen");
 
             let calendarEl = document.getElementById('calendar');
             let sheetUrl = "https://script.google.com/macros/s/AKfycbxLFbguGbBRS1OeUQFg99SoX_6kDSkICRssF9W2TaBzhvjbnxgsbdLEMgug1ygyQIdk/exec";
 
-            const calendar = new tui.Calendar('#calendar', {
-                defaultView: 'month',
-                taskView: true,
-                scheduleView: true,
-                useCreationPopup: true,
-                useDetailPopup: true,
-                week: {
-                    showTimezoneCollapseButton: true,
-                    timezones: [
-                        {
-                            timezoneOffset: 0,
-                            displayLabel: 'UTC',
-                            tooltip: 'Universal Time Coordinated'
-                        }
-                    ]
+            let calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                selectable: true,
+                editable: true,
+                eventClick: function(info) {
+                    let name = prompt("Gib deinen Namen ein, um dich für dieses Event anzumelden:");
+                    if (name) {
+                        updateEvent(info.event.title, name);
+                    }
+                },
+                dateClick: function(info) {
+                    let title = prompt("Gib den Event-Titel ein:");
+                    if (title) {
+                        createEvent(title, info.dateStr);
+                    }
                 }
             });
+            calendar.render();
 
             async function fetchEvents() {
                 try {
@@ -54,17 +52,12 @@
                     if (!response.ok) throw new Error("Fehler beim Abrufen der Events");
                     let data = await response.json();
                     console.log("Geladene Events:", data);
-                    return data.map(event => ({
-                        id: event.id,
-                        calendarId: '1',
+                    calendar.addEventSource(data.map(event => ({
                         title: event.title,
-                        category: 'time',
-                        start: event.start,
-                        end: event.start
-                    }));
+                        start: event.start
+                    })));
                 } catch (error) {
                     console.error(error);
-                    return [];
                 }
             }
 
@@ -100,21 +93,7 @@
                 }
             }
 
-            fetchEvents().then(events => {
-                calendar.createSchedules(events);
-                calendar.on('beforeCreateSchedule', async function(event) {
-                    let title = prompt("Gib den Event-Titel ein:");
-                    if (title) {
-                        await createEvent(title, event.start);
-                    }
-                });
-                calendar.on('clickSchedule', async function(event) {
-                    let name = prompt("Gib deinen Namen ein, um dich für dieses Event anzumelden:");
-                    if (name) {
-                        await updateEvent(event.schedule.title, name);
-                    }
-                });
-            }).catch(error => console.error("Fehler beim Laden des Kalenders:", error));
+            fetchEvents();
         });
     </script>
 </body>
