@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
-        #calendar { max-width: 800px; margin: 40px auto; }
+        #calendar { max-width: 800px; margin: 40px auto; height: 600px; }
     </style>
 </head>
 <body>
@@ -20,32 +20,48 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             let calendarEl = document.getElementById('calendar');
-            let sheetUrl = "https://script.google.com/macros/s/AKfycbwTrbxJmZ-2-2G9LugbVu_INe5KXHVytsEki2mkrxMCCRxNK4_UgDIsRIJG77wbOZnr/exec";
+            let sheetUrl = "https://script.google.com/macros/s/AKfycbzNcLv2WR7do34fRrQyDyT9JMIWN7hTH_eg6-sYymSfIVbnMMb3Fqv-MOkYKTdxgrk/exec";
 
             async function fetchEvents() {
-                let response = await fetch(sheetUrl + "?action=get");
-                return await response.json();
+                try {
+                    let response = await fetch(sheetUrl + "?action=get");
+                    let data = await response.json();
+                    console.log("Geladene Events:", data);
+                    return data;
+                } catch (error) {
+                    console.error("Fehler beim Abrufen der Events:", error);
+                    return [];
+                }
             }
 
             async function updateEvent(eventTitle, userName) {
-                let response = await fetch(sheetUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ action: "update", event: eventTitle, name: userName })
-                });
-                let result = await response.text();
-                alert(result);
+                try {
+                    let response = await fetch(sheetUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "update", event: eventTitle, name: userName })
+                    });
+                    let result = await response.text();
+                    alert(result);
+                    location.reload();
+                } catch (error) {
+                    console.error("Fehler beim Eintragen des Teilnehmers:", error);
+                }
             }
 
             async function createEvent(eventTitle, eventDate, eventTime) {
-                let response = await fetch(sheetUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ action: "create", title: eventTitle, date: eventDate, time: eventTime })
-                });
-                let result = await response.text();
-                alert(result);
-                location.reload();
+                try {
+                    let response = await fetch(sheetUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "create", title: eventTitle, date: eventDate, time: eventTime })
+                    });
+                    let result = await response.text();
+                    alert(result);
+                    location.reload();
+                } catch (error) {
+                    console.error("Fehler beim Erstellen des Events:", error);
+                }
             }
 
             fetchEvents().then(events => {
@@ -53,18 +69,18 @@
                     initialView: 'dayGridMonth',
                     editable: true,
                     selectable: true,
-                    events: events,
-                    select: function(info) {
+                    events: fetchEvents,
+                    select: async function(info) {
                         let title = prompt("Gib den Event-Titel ein:");
                         let time = prompt("Gib die Uhrzeit ein (HH:MM):");
                         if (title && time) {
-                            createEvent(title, info.startStr, time);
+                            await createEvent(title, info.startStr, time);
                         }
                     },
-                    eventClick: function(info) {
+                    eventClick: async function(info) {
                         let name = prompt('Gib deinen Namen ein, um dich für dieses Event anzumelden:');
                         if (name) {
-                            updateEvent(info.event.title, name);
+                            await updateEvent(info.event.title, name);
                         }
                     }
                 });
