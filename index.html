@@ -14,60 +14,53 @@
 </head>
 <body>
     <h1>📅 RP-Event Kalender</h1>
-    <p>Trage dich direkt für ein Event ein!</p>
+    <p>Neue Termine können direkt im Kalender erstellt werden. Teilnehmer können sich eintragen!</p>
     <div id="calendar"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             let calendarEl = document.getElementById('calendar');
-            let repoOwner = "OnkelHomie";  // GitHub Benutzername
-            let repoName = "test";  // Name des Repositories
-            let filePath = "events.json";
-            let token = "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";  // Sicher speichern!
-            let apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+            let sheetUrl = "https://script.google.com/macros/s/YOUR_GOOGLE_SCRIPT_ID/exec";
 
             async function fetchEvents() {
-                let response = await fetch(apiUrl, {
-                    headers: { "Authorization": `token ${token}` }
-                });
-                let data = await response.json();
-                return JSON.parse(atob(data.content));
+                let response = await fetch(sheetUrl + "?action=get");
+                return await response.json();
             }
 
             async function updateEvent(eventTitle, userName) {
-                let response = await fetch(apiUrl, {
-                    headers: { "Authorization": `token ${token}` }
+                let response = await fetch(sheetUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "update", event: eventTitle, name: userName })
                 });
-                let data = await response.json();
-                let events = JSON.parse(atob(data.content));
+                let result = await response.text();
+                alert(result);
+            }
 
-                let event = events.find(e => e.title === eventTitle);
-                if (event) {
-                    event.extendedProps.teilnehmer.push(userName);
-                } else {
-                    alert("Event nicht gefunden!");
-                    return;
-                }
-
-                let updatedContent = btoa(JSON.stringify(events, null, 2));
-
-                await fetch(apiUrl, {
-                    method: "PUT",
-                    headers: { "Authorization": `token ${token}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        message: `Teilnehmer hinzugefügt: ${userName}`,
-                        content: updatedContent,
-                        sha: data.sha
-                    })
+            async function createEvent(eventTitle, eventDate, eventTime) {
+                let response = await fetch(sheetUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "create", title: eventTitle, date: eventDate, time: eventTime })
                 });
-
-                alert(`${userName} wurde für ${eventTitle} eingetragen!`);
+                let result = await response.text();
+                alert(result);
+                location.reload();
             }
 
             fetchEvents().then(events => {
                 let calendar = new FullCalendar.Calendar(calendarEl, {
                     initialView: 'dayGridMonth',
+                    editable: true,
+                    selectable: true,
                     events: events,
+                    select: function(info) {
+                        let title = prompt("Gib den Event-Titel ein:");
+                        let time = prompt("Gib die Uhrzeit ein (HH:MM):");
+                        if (title && time) {
+                            createEvent(title, info.startStr, time);
+                        }
+                    },
                     eventClick: function(info) {
                         let name = prompt('Gib deinen Namen ein, um dich für dieses Event anzumelden:');
                         if (name) {
