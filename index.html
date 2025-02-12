@@ -5,14 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RP-Event Kalender</title>
     
-    <!-- FullCalendar Stylesheet -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.15/index.min.css" rel="stylesheet">
-    
-    <!-- Lade jQuery zuerst -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    
-    <!-- Lade FullCalendar danach -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.15/index.min.js"></script>
+    <!-- DayPilot Stylesheet -->
+    <script src="https://cdn.daypilot.org/daypilot-all.min.js"></script>
     
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
@@ -26,7 +20,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("FullCalendar geladen:", typeof FullCalendar);
+            console.log("DayPilot Kalender geladen");
 
             let calendarEl = document.getElementById('calendar');
             let sheetUrl = "https://script.google.com/macros/s/AKfycbxLFbguGbBRS1OeUQFg99SoX_6kDSkICRssF9W2TaBzhvjbnxgsbdLEMgug1ygyQIdk/exec";
@@ -37,7 +31,12 @@
                     if (!response.ok) throw new Error("Fehler beim Abrufen der Events");
                     let data = await response.json();
                     console.log("Geladene Events:", data);
-                    return data;
+                    return data.map(event => ({
+                        id: event.id,
+                        text: event.title,
+                        start: event.start,
+                        end: event.start // DayPilot benötigt Start/Ende
+                    }));
                 } catch (error) {
                     console.error(error);
                     return [];
@@ -60,12 +59,12 @@
                 }
             }
 
-            async function createEvent(eventTitle, eventDate, eventTime) {
+            async function createEvent(eventTitle, eventDate) {
                 try {
                     let response = await fetch(sheetUrl, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ action: "create", title: eventTitle, date: eventDate, time: eventTime })
+                        body: JSON.stringify({ action: "create", title: eventTitle, date: eventDate })
                     });
                     if (!response.ok) throw new Error("Fehler beim Erstellen des Events");
                     let result = await response.text();
@@ -76,27 +75,24 @@
                 }
             }
 
+            const calendar = new DayPilot.Calendar("calendar");
+            calendar.viewType = "Month";
+            
             fetchEvents().then(events => {
-                let calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'dayGridMonth',
-                    editable: true,
-                    selectable: true,
-                    events: fetchEvents,
-                    select: async function(info) {
-                        let title = prompt("Gib den Event-Titel ein:");
-                        let time = prompt("Gib die Uhrzeit ein (HH:MM):");
-                        if (title && time) {
-                            await createEvent(title, info.startStr, time);
-                        }
-                    },
-                    eventClick: async function(info) {
-                        let name = prompt('Gib deinen Namen ein, um dich für dieses Event anzumelden:');
-                        if (name) {
-                            await updateEvent(info.event.title, name);
-                        }
+                calendar.events.list = events;
+                calendar.onTimeRangeSelected = async function(args) {
+                    let title = prompt("Gib den Event-Titel ein:");
+                    if (title) {
+                        await createEvent(title, args.start);
                     }
-                });
-                calendar.render();
+                };
+                calendar.onEventClick = async function(args) {
+                    let name = prompt("Gib deinen Namen ein, um dich für dieses Event anzumelden:");
+                    if (name) {
+                        await updateEvent(args.e.text(), name);
+                    }
+                };
+                calendar.init();
             }).catch(error => console.error("Fehler beim Laden des Kalenders:", error));
         });
     </script>
