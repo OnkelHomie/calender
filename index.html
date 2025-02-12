@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RP-Event Kalender</title>
     
-    <!-- Korrekte DayPilot Quelle -->
-    <script src="https://unpkg.com/daypilot-lite@latest/daypilot-all.min.js"></script>
+    <!-- TUI Calendar Stylesheet & Scripts -->
+    <link rel="stylesheet" href="https://uicdn.toast.com/tui-calendar/latest/tui-calendar.min.css">
+    <script src="https://uicdn.toast.com/tui-calendar/latest/tui-calendar.min.js"></script>
     
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
@@ -20,10 +21,16 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("DayPilot Kalender geladen");
+            console.log("TUI Calendar geladen");
 
             let calendarEl = document.getElementById('calendar');
             let sheetUrl = "https://script.google.com/macros/s/AKfycbxLFbguGbBRS1OeUQFg99SoX_6kDSkICRssF9W2TaBzhvjbnxgsbdLEMgug1ygyQIdk/exec";
+
+            const calendar = new tui.Calendar(calendarEl, {
+                defaultView: 'month',
+                taskView: true,
+                scheduleView: true
+            });
 
             async function fetchEvents() {
                 try {
@@ -33,9 +40,10 @@
                     console.log("Geladene Events:", data);
                     return data.map(event => ({
                         id: event.id,
-                        text: event.title,
+                        calendarId: '1',
+                        title: event.title,
                         start: event.start,
-                        end: event.start // DayPilot benötigt Start/Ende
+                        end: event.start
                     }));
                 } catch (error) {
                     console.error(error);
@@ -75,24 +83,20 @@
                 }
             }
 
-            const calendar = new DayPilot.Calendar("calendar");
-            calendar.viewType = "Month";
-            
             fetchEvents().then(events => {
-                calendar.events.list = events;
-                calendar.onTimeRangeSelected = async function(args) {
+                calendar.createSchedules(events);
+                calendar.on('beforeCreateSchedule', async function(event) {
                     let title = prompt("Gib den Event-Titel ein:");
                     if (title) {
-                        await createEvent(title, args.start);
+                        await createEvent(title, event.start);
                     }
-                };
-                calendar.onEventClick = async function(args) {
+                });
+                calendar.on('clickSchedule', async function(event) {
                     let name = prompt("Gib deinen Namen ein, um dich für dieses Event anzumelden:");
                     if (name) {
-                        await updateEvent(args.e.text(), name);
+                        await updateEvent(event.schedule.title, name);
                     }
-                };
-                calendar.init();
+                });
             }).catch(error => console.error("Fehler beim Laden des Kalenders:", error));
         });
     </script>
