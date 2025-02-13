@@ -1,0 +1,21 @@
+name: Create Issue from Form
+on:
+  repository_dispatch:
+    types: [new_event]
+
+jobs:
+  create_issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -d '{
+            "title": "'"${{ github.event.client_payload.event }}"' am '"${{ github.event.client_payload.date }}"'",
+            "body": "Teilnehmer: '"${{ github.event.client_payload.participant }}"'",
+            "labels": ["Kalender"]
+          }' \
+          https://api.github.com/repos/${{ github.repository }}/issues
