@@ -1,7 +1,7 @@
 name: Generate iCalendar File
 on:
   schedule:
-    - cron: '0 * * * *'  # Jede Stunde aktualisieren
+    - cron: '0 * * * *'  # Aktualisiert jede Stunde
   push:
     branches:
       - main
@@ -23,7 +23,7 @@ jobs:
           echo "CALSCALE:GREGORIAN" >> events.ics
           echo "METHOD:PUBLISH" >> events.ics
 
-          issues=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          issues=$(curl -s -H "Authorization: token ${{ secrets.PERSONAL_ACCESS_TOKEN }}" \
           "https://api.github.com/repos/${{ github.repository }}/issues?labels=Kalender" | jq -c '.[]')
 
           echo "$issues" | while IFS= read -r issue; do
@@ -31,7 +31,7 @@ jobs:
             DATE=$(echo $issue | jq -r '.title | split(" am ") | last')
             DESC=$(echo $issue | jq -r '.body')
 
-            # Extrahiere die Teilnehmerliste
+            # Teilnehmer extrahieren
             PARTICIPANTS=$(echo "$DESC" | sed -n 's/Teilnehmer: //p')
 
             ICS_ATTENDEES=""
@@ -45,7 +45,7 @@ jobs:
             echo "BEGIN:VEVENT" >> events.ics
             echo "UID:$(uuidgen)" >> events.ics
             echo "DTSTAMP:$(date -u +"%Y%m%dT%H%M%SZ")" >> events.ics
-            echo "DTSTART:${DATE//-/}" >> events.ics  # YYYYMMDD Format
+            echo "DTSTART:${DATE//-/}" >> events.ics
             echo "DTEND:${DATE//-/}" >> events.ics
             echo "SUMMARY:$TITLE" >> events.ics
             echo "DESCRIPTION:$DESC" >> events.ics
@@ -56,9 +56,11 @@ jobs:
           echo "END:VCALENDAR" >> events.ics
 
       - name: Commit and Push ICS File
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add events.ics
-          git commit -m "Update .ics file"
-          git push
+          git commit -m "Update .ics file" || echo "No changes to commit"
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
