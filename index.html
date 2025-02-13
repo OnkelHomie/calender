@@ -28,64 +28,64 @@
     <ul id="eventList"></ul>
 
     <script>
-        const repoOwner = "OnkelHomie";
-        const repoName = "calender";
+    const repoOwner = "OnkelHomie";
+    const repoName = "calender";
 
-        function addParticipant() {
-            const newInput = document.createElement("input");
-            newInput.type = "text";
-            newInput.name = "participant";
-            document.getElementById("participants").appendChild(newInput);
-        }
+    function addParticipant() {
+        const newInput = document.createElement("input");
+        newInput.type = "text";
+        newInput.name = "participant";
+        document.getElementById("participants").appendChild(newInput);
+    }
 
-        document.getElementById("eventForm").addEventListener("submit", async function(event) {
-            event.preventDefault();
+    document.getElementById("eventForm").addEventListener("submit", async function(event) {
+        event.preventDefault();
 
-            const eventName = document.getElementById("eventName").value;
-            const eventDate = document.getElementById("eventDate").value;
-            const participants = [...document.querySelectorAll("input[name='participant']")]
-                                .map(input => input.value)
-                                .join(", ");
+        const eventName = document.getElementById("eventName").value;
+        const eventDate = document.getElementById("eventDate").value;
+        const participants = [...document.querySelectorAll("input[name='participant']")]
+                            .map(input => input.value)
+                            .join(", ");
 
-            const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/dispatches`, {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer GITHUB_PUBLIC_TOKEN", // GitHub Actions verarbeitet den Token
-                    "Accept": "application/vnd.github.everest-preview+json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    event_type: "new_event",
-                    client_payload: {
-                        event: eventName,
-                        date: eventDate,
-                        participant: participants
-                    }
-                })
-            });
-
-            if (response.ok) {
-                alert("Termin erfolgreich eingetragen!");
-                window.location.reload();
-            } else {
-                const errorText = await response.text();
-                alert("Fehler beim Eintragen des Termins: " + errorText);
-            }
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/dispatches`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${process.env.PERSONAL_ACCESS_TOKEN}`, // Nutzt GitHub Secret
+                "Accept": "application/vnd.github.everest-preview+json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event_type: "new_event",
+                client_payload: {
+                    event: eventName,
+                    date: eventDate,
+                    participant: participants
+                }
+            })
         });
 
-        async function fetchEvents() {
-            const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/issues?labels=Kalender`);
-            const issues = await response.json();
-            const eventList = document.getElementById("eventList");
-
-            issues.forEach(issue => {
-                const listItem = document.createElement("li");
-                listItem.textContent = `${issue.title} - ${issue.body}`;
-                eventList.appendChild(listItem);
-            });
+        if (response.ok) {
+            alert("Termin erfolgreich eingetragen!");
+            window.location.reload();
+        } else {
+            const errorText = await response.text();
+            alert("Fehler beim Eintragen des Termins: " + errorText);
         }
+    });
 
-        fetchEvents();
+    async function fetchEvents() {
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/issues?labels=Kalender`);
+        const issues = await response.json();
+        const eventList = document.getElementById("eventList");
+
+        issues.forEach(issue => {
+            const listItem = document.createElement("li");
+            listItem.textContent = `${issue.title} - ${issue.body}`;
+            eventList.appendChild(listItem);
+        });
+    }
+
+    fetchEvents();
     </script>
 </body>
 </html>
