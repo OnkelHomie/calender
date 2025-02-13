@@ -6,7 +6,7 @@ on:
     branches:
       - main
   repository_dispatch:
-    types: [new_event]  # ICS wird jetzt auch bei neuen Events aktualisiert!
+    types: [new_event]
 
 jobs:
   update_ics:
@@ -19,18 +19,21 @@ jobs:
         run: |
           echo "BEGIN:VCALENDAR" > events.ics
           echo "VERSION:2.0" >> events.ics
+          echo "PRODID:-//GitHub Calendar//DE" >> events.ics
+          echo "CALSCALE:GREGORIAN" >> events.ics
+          echo "METHOD:PUBLISH" >> events.ics
 
-          issues=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/issues?labels=Kalender" | jq -c '.[]')
+          issues=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/issues?labels=Kalender" | jq -c '.[]')
 
           echo "$issues" | while IFS= read -r issue; do
             TITLE=$(echo $issue | jq -r '.title')
             DATE=$(echo $issue | jq -r '.title | split(" am ") | last')
             DESC=$(echo $issue | jq -r '.body')
 
-            # Extrahiere die Teilnehmerliste, falls vorhanden
+            # Extrahiere die Teilnehmerliste
             PARTICIPANTS=$(echo "$DESC" | sed -n 's/Teilnehmer: //p')
 
-            # Falls mehrere Teilnehmer vorhanden sind, formatieren wir sie für ICS
             ICS_ATTENDEES=""
             if [ ! -z "$PARTICIPANTS" ]; then
               IFS=', ' read -ra ADDR <<< "$PARTICIPANTS"
@@ -40,11 +43,13 @@ jobs:
             fi
 
             echo "BEGIN:VEVENT" >> events.ics
+            echo "UID:$(uuidgen)" >> events.ics
+            echo "DTSTAMP:$(date -u +"%Y%m%dT%H%M%SZ")" >> events.ics
+            echo "DTSTART:${DATE//-/}" >> events.ics  # YYYYMMDD Format
+            echo "DTEND:${DATE//-/}" >> events.ics
             echo "SUMMARY:$TITLE" >> events.ics
             echo "DESCRIPTION:$DESC" >> events.ics
             echo -e "$ICS_ATTENDEES" >> events.ics
-            echo "DTSTART:${DATE//-/}" >> events.ics  # YYYYMMDD Format
-            echo "DTEND:${DATE//-/}" >> events.ics
             echo "END:VEVENT" >> events.ics
           done
 
